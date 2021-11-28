@@ -97,16 +97,23 @@ int construct_track_nbp(string* p, int* t) {	//´Ó.nbpÎÄ¼ş×Ö·û´®Éú³ÉÊ±¼äĞòÁĞÒô¹ì£
 }
 
 void construct_track_nbs(ifstream& infile, int t[][4096], int* l){
+	//nbsÎÄ¼ş¼ÇÂ¼Ã¿¸öÒô·ûµ½ÉÏÒ»¸öÒô·ûµÄ¡°¾àÀë¡±£¬¼´ºáÏòÊ±¼ä¾àÀë£¬×İÏòÒô¹ì¾àÀë
+	//¶ÁÈ¡Ê±£¬´ÓÉÏµ½ÏÂÏÈ¶ÁÍêÃ¿¸ötickËùÓĞÒô¹ì£¬ÔÙ´Ó×óµ½ÓÒ¶ÁÍêËùÓĞtick
+	//¸Ãº¯Êı´Ó¸ø¶¨ÎÄ¼şÖ¸Õë£¨ÒÑ¶¨Î»µ½¼ÇÂ¼Òô¹ìµÄ²¿·Ö£¬Ïê¼ûfind_track_beginº¯Êı£©£¬¶ÁÈ¡Òô·ûÊÂ¼şµ½track[32][4096]Êı×é£¬½«Òô¹ì³¤¶È£¨×îºóÒ»¸öÒôµÄÊ±¼ä£©¼ÇÂ¼ÓÚÊı×él
+
 	int h_jump, v_jump, h_pos = -1, v_pos = -1, p, unused;
-	bool tick_changed = false;
-	char temp_peek;
-	do {
+	// h_jump, v_jump:£¨µ½ÏÂÒ»¸öÒôµÄ£©Ë®Æ½Ê±¼äÌø×ª¾àÀë£¬´¹Ö±Òô¹ìÌø×ª¾àÀë
+	// h_pos, v_pos: µ±Ç°Ê±¼äÎ»ÖÃ£¬µ±Ç°Òô¹ìÎ»ÖÃ
+	// p, unused: Òô¸ß£¬Òô·ûµÄÆäËûÎ´Ê¹ÓÃÊôĞÔ£¨ÎÒÖ»¹Ø×¢µ¥¸ö±äÁ¿£¬ÈçÓĞĞèÒª¿ÉºÏ²¢Îª½á¹¹Ìå£©
+
+	bool tick_changed = false;						//¼ÇÂ¼ÊÇ·ñ·¢ÉúÁĞ£¨Ê±¼ä£©Ìø×ª£¬ÓÃÓÚÅĞ¶ÏÒô¹ì½áÊø
+	do {											//¶Áµ½Ë®Æ½0£¬´¹Ö±0´ú±íÁĞ½áÊø£»Ë®Æ½0£¬´¹Ö±0£¬Ë®Æ½0´ú±íÎÄ¼ş½áÊø
 		type_read(infile, Short, &h_jump);
 		if (h_jump == 0)
-			if (tick_changed) return;
+			if (tick_changed) return;	//ÎÄ¼ş½áÊø
 		h_pos += h_jump;
 		type_read(infile, Short, &v_jump);
-		if (v_jump == 0) {
+		if (v_jump == 0) {				//ÁĞ½áÊø£¬Ìø×ª
 			v_pos = -1;
 			tick_changed = true;
 		}
