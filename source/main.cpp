@@ -59,6 +59,13 @@ void type_read(ifstream& infile, enum_read_type type, char* buf) {
 	else return;
 }
 
+void type_read(ifstream& infile, enum_read_type* types, int l, char* buf) {
+	for (int i = 0; i < l; i++) {
+		if (types[i] == String) type_read(infile, String, buf);
+		else type_read(infile, types[i]);
+	}
+}
+
 int construct_track_nbp(string* p, int* t) {	//从.nbp文件字符串生成时间序列音轨，返回长度
 	int i = 0, pos = 0;
 	while ((*p)[i + 2] != '|')
@@ -175,13 +182,11 @@ int check_8gt(int t) {
 
 int find_track_begin(ifstream& infile) {
 	int layers; char unused[257];
-	infile.seekg(6);
+	enum_read_type nbs_head_1[4] = { Short,Byte,Byte,Short };
+	type_read(infile, nbs_head_1, 4, unused);
 	layers = type_read(infile, Short);
-	for (int i = 1; i <=4; i++)
-		type_read(infile, String, unused);
-	infile.seekg(25, ios::cur);
-	type_read(infile, String, unused);
-	infile.seekg(4, ios::cur);
+	enum_read_type nbs_head_2[17] = { String,String,String,String,Short,Byte,Byte,Byte,Int,Int,Int,Int,Int,String,Byte,Byte,Short };
+	type_read(infile, nbs_head_2, 17, unused);
 	return layers;
 }
 
@@ -262,7 +267,7 @@ int main(int argc, char* argv[]) {
 					infile2.read(temp, str_len);
 					name = string(temp, str_len);
 				}
-				if (type_read(infile2, Byte)) continue;
+				if (type_read(infile2, Byte)) {type_read(infile2, Short); continue;}
 				else type_read(infile2, Short);
 				length[i] = length[i] / 4 + 1;
 				num_of_err = check_8gt(i);
