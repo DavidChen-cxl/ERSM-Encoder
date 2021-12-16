@@ -1,5 +1,6 @@
 using namespace std;
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include <cmath>
@@ -82,7 +83,7 @@ int construct_track_nbp(string* p, int* t) {	//´Ó.nbpÎÄ¼ş×Ö·û´®Éú³ÉÊ±¼äĞòÁĞÒô¹ì£
 					for (k = 0; k < j; k++)
 						temp += buf[k] * pow(10, j - k - 1);
 					if (loop_count == 1) pos += temp;
-					else t[pos] = temp - 33;
+					else t[pos] = temp;
 					j = 0;
 					temp = 0;
 				}
@@ -121,9 +122,9 @@ void construct_track_nbs(ifstream& infile, int t[][4096], int* l){
 			tick_changed = false;
 			v_pos += v_jump;
 			type_read(infile, Byte, &unused);
-			p = (int)infile.get() - 33;
+			p = (int)infile.get();
 			t[v_pos][h_pos] = p;
-			l[v_pos] = h_pos;
+			l[v_pos] = h_pos/4+1;
 			type_read(infile, Short, &unused);
 		}
 	} while (true);
@@ -169,18 +170,31 @@ void generate_function(ofstream& f, int s[][27][2], int c, string n, bool is_pit
 	f << "\n\n";
 }
 
+void generate_txt(ofstream& f, int p[1024], int r[1024], int l, string n) {
+	f << n << endl << 'Z';
+	for (int i = 0; i < l; i++) {
+		if (p[i] != -1) 
+			f.put(char('A' + p[i]));
+		else
+			f.put('A');
+		f << hex << r[i];
+	}
+	f << endl << endl;
+}
+
 int check_8gt(int t) {
 	int flag; int num_of_err = 0;
 	for (int i = 0; i < length[t]; i++) {
 		flag = 0;
 		for (int j = 0; j < 4; j++) {
-			if (track[t][4 * i + j] >= 0) {
-				if (pitch[t][i] != track[t][4 * i + j]) {
+			if (track[t][4 * i + j] >= 33 && track[t][4 * i + j] <= 57) {
+				if (pitch[t][i] != track[t][4 * i + j] - 33) {
 					flag++;
-					pitch[t][i] = track[t][4 * i + j];
+					pitch[t][i] = track[t][4 * i + j] - 33;
 				}
 				rhythm[t][i] += pow(2, 3 - j);
 			}
+			else if (track[t][4 * i + j] != -1) flag = 2;
 		}
 		if (flag >= 2) error[num_of_err++] = i;
 	}
@@ -216,6 +230,7 @@ int main(int argc, char* argv[]) {
 		memset(track, -1, sizeof(track));
 		memset(pitch, -1, sizeof(pitch));
 		memset(rhythm, 0, sizeof(rhythm));
+		memset(length, -1, sizeof(length));
 		memset(p_shulker, -1, sizeof(p_shulker));
 		memset(r_shulker, 0, sizeof(r_shulker));
 
@@ -227,13 +242,18 @@ int main(int argc, char* argv[]) {
 			//´´½¨Êä³öÎÄ¼ş
 			if (!nbp_write_flag) {	
 				ofstream nbp_out("nbp_output.mcfunction", ios::out);
+				ofstream nbp_out_txt("nbp_output.txt", ios::out);
 				nbp_out.close();
+				nbp_out_txt.close();
 				nbp_write_flag = true;
 			}
 			ofstream nbp_out("nbp_output.mcfunction", ios::out | ios::app);
+			ofstream nbp_out_txt("nbp_output.txt", ios::out | ios::app);
 
-			string nb; //´Ó.nbpÎÄ¼ş¶ÁÈ¡µÄÒô¹ì
-			infile2 >> nb; 			
+			string nb; char nb_in;//´Ó.nbpÎÄ¼ş¶ÁÈ¡µÄÒô¹ì
+			while (infile2.read(&nb_in, 1)) {
+				nb.push_back(nb_in);
+			}			
 			length[0] = construct_track_nbp(&nb, track[0]);	//ÖØ¹¹ÎªÊ±¼äĞòÁĞ
 
 			num_of_err = check_8gt(0);
@@ -247,6 +267,7 @@ int main(int argc, char* argv[]) {
 				//Éú³ÉÖ¸Áî
 				generate_function(nbp_out, p_shulker, p_scount, name, 1);
 				generate_function(nbp_out, r_shulker, r_scount, name, 0);
+				generate_txt(nbp_out_txt, pitch[0], rhythm[0], length[0], name);
 			}
 			else {
 				nbp_out << "#For Track " << name << " found errors at bar ";
@@ -255,16 +276,17 @@ int main(int argc, char* argv[]) {
 				nbp_out << "\n\n";
 			}
 			nbp_out.close();
+			nbp_out_txt.close();
 		}
 
 		//´¦Àínbs£¬ÆäÎÄ¼ş¸ñÊ½ÔÚopennbs.org/nbsÓĞËµÃ÷
 		else {
 			ofstream nbs_out(name + ".mcfunction", ios::out);
+			ofstream nbs_out_txt(name + ".txt", ios::out);
 			int layer_count = find_track_begin(infile2);	//ÕÒµ½Òô¹ìÆğÊ¼Î»ÖÃ
-			memset(length, 0, sizeof(length));
 			construct_track_nbs(infile2, track, length);
 
-			for (int i = 0; i < min(32, layer_count) && length[i] != 0; i++) {
+			for (int i = 0; i < min(32, layer_count) && length[i] >= 0; i++) {
 				int str_len; type_read(infile2, Int, &str_len);
 				if (str_len == 0) {
 					name = string("Layer ") + to_string(i + 1);
@@ -276,7 +298,6 @@ int main(int argc, char* argv[]) {
 				}
 				if (type_read(infile2, Byte)) {type_read(infile2, Short); continue;}
 				else type_read(infile2, Short);
-				length[i] = length[i] / 4 + 1;
 				num_of_err = check_8gt(i);
 				if (num_of_err == 0) {
 					//´ò°üµ½Ç±Ó°ºĞ£¬»ñÈ¡ËùĞè¸ñ×ÓÊı
@@ -287,6 +308,7 @@ int main(int argc, char* argv[]) {
 					//Éú³ÉÖ¸Áî
 					generate_function(nbs_out, p_shulker, p_scount, name, 1);
 					generate_function(nbs_out, r_shulker, r_scount, name, 0);
+					generate_txt(nbs_out_txt, pitch[i], rhythm[i], length[i], name);
 				}
 				else {
 					nbs_out << "#For Track " << name << " found errors at bar ";
@@ -296,6 +318,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			nbs_out.close();
+			nbs_out_txt.close();
 		}
 		infile2.close();
 	}
